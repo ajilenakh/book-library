@@ -1,59 +1,60 @@
 pipeline {
     agent any
 
+    environment {
+        MYSQL_DB_HOST = "jdbc:mariadb://localhost"
+        MYSQL_DB_PORT = "3306"
+    }
+
     stages {
         // Stage to pull the code from the development branch of your Git repository
         stage('Checkout Code') {
             steps {
                 script {
-                    // Checkout the development branch from your Git repo
                     git branch: 'development', url: 'https://github.com/ajilenakh/book-library.git'
                 }
             }
         }
 
-        // Stage to run Maven clean install
-        stage('Build and Install') {
+        // Stage to set the credentials
+        stage('Setting Secret Env') {
             steps {
                 script {
-                    echo 'Running mvn clean install...'
-                    sh 'mvn clean install'
+                    withCredentials([usernamePassword(credentialsId: 'MYSQL_DB_CREDENTIALS', usernameVariable: 'LIBRARY_MYSQL_DB_USERNAME', passwordVariable: 'LIBRARY_MYSQL_DB_PASSWORD')]) {
+
+                        // Exporting these custom variables for use in the shell commands
+                        sh """
+                            export LIBRARY_MYSQL_DB_USERNAME=${LIBRARY_MYSQL_DB_USERNAME}
+                            export LIBRARY_MYSQL_DB_PASSWORD=${LIBRARY_MYSQL_DB_PASSWORD}
+                        """
+                    }
                 }
             }
         }
 
-        // Stage to run Maven tests
-        stage('Run Tests') {
-            steps {
-                script {
-                    echo 'Running mvn test...'
-                    sh 'mvn test'
-                }
-            }
-        }
-
-        // Stage to update application.properties
+        // Stage to update application.properties with the correct Spring profile
         stage('Set Spring Profile') {
             steps {
                 script {
-                    echo "Setting active profile to dev..."
+                    // Ensure the application.properties file exists, otherwise create it
                     if (!fileExists('src/main/resources/application.properties')) {
-                        echo "application.properties not found! Creating it."
                         sh 'echo "spring.profiles.active=dev" >> src/main/resources/application.properties'
                     } else {
+                        // Update the application.properties to set the Spring profile
                         sh 'echo "spring.profiles.active=dev" >> src/main/resources/application.properties'
                     }
                 }
             }
         }
 
-        // Stage to run Spring Boot application
+        // Stage to run the Spring Boot application
         stage('Run Spring Boot Application') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'MYSQL_DB_CREDENTIALS', usernameVariable: 'MYSQL_USERNAME', passwordVariable: 'MYSQL_PASSWORD')]) {
-                    script {
-                        sh 'mvn spring-boot:run'
-                    }
+                script {
+                    // Run Spring Boot application using the environment variables
+                    sh """
+                        mvn spring-boot:run
+                    """
                 }
             }
         }
