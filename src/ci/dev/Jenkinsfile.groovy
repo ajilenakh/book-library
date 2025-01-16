@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        MYSQL_DB_HOST = "jdbc:mariadb://localhost"
-        MYSQL_DB_PORT = "3306"
-        MYSQL_DB_USERNAME = credentials('MYSQL_DB_CREDENTIALS_USERNAME')
-        MYSQL_DB_PASSWORD = credentials('MYSQL_DB_CREDENTIALS_PASSWORD')
-    }
-
     stages {
         // Stage to pull the code from the development branch of your Git repository
         stage('Checkout Code') {
@@ -57,9 +50,10 @@ pipeline {
         // Stage to run Spring Boot application
         stage('Run Spring Boot Application') {
             steps {
-                script {
-                    echo 'Running Spring Boot application...'
-                    sh 'mvn spring-boot:run'
+                withCredentials([usernamePassword(credentialsId: 'MYSQL_DB_CREDENTIALS', usernameVariable: 'MYSQL_USERNAME', passwordVariable: 'MYSQL_PASSWORD')]) {
+                    script {
+                        sh 'mvn spring-boot:run'
+                    }
                 }
             }
         }
