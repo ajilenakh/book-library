@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    environment {
+        // Define the database host, port, and other non-sensitive info
+        LIBRARY_MYSQL_DB_HOST = 'jdbc:mariadb://localhost'
+        LIBRARY_MYSQL_DB_PORT = '3306'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Clone the repository from the 'development' branch
+                git url: 'https://github.com/ajilenakh/book-library.git', branch: 'development'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'MYSQL_DB_CREDENTIALS', 
+                                                      usernameVariable: 'LIBRARY_MYSQL_DB_USERNAME', 
+                                                      passwordVariable: 'LIBRARY_MYSQL_DB_PASSWORD')]) {
+                        sh 'mvn clean install'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'MYSQL_DB_CREDENTIALS', 
+                                                      usernameVariable: 'LIBRARY_MYSQL_DB_USERNAME', 
+                                                      passwordVariable: 'LIBRARY_MYSQL_DB_PASSWORD')]) {
+                        sh 'mvn spring-boot:run'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed.'
+        }
+    }
+}
