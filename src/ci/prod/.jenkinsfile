@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Clone the repository from the 'development' branch
+                // Clone the repository from the 'master' branch
                 git url: 'https://github.com/ajilenakh/book-library.git', branch: 'master'
             }
         }
